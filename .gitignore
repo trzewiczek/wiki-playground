@@ -1,3 +1,9 @@
+# Data files and output images
+*.xml
+*.csv
+*.png
+*.pdf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
