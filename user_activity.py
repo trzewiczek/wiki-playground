@@ -1,26 +1,36 @@
 # coding: utf-8
 
-# TODO add some logs, so it's clear the script is working fine
-
 import pandas as pd
 import re
+import sys
 
 from datetime   import date
 from datetime   import datetime as dt
 from matplotlib import pyplot   as plt
 
-# TODO get language code from agrs and xml run parser if no csv file is present
 
-data = pd.read_csv('csv/szlwiki-latest-stub-meta-history.csv',
-                   parse_dates=['Timestamp'])
+## setup the stage
+try:
+    LANG = sys.argv[1]
+except IndexError:
+    print("!!! No wiki language code specified")
+    print("--- python parse_xml.py <lang_code>")
 
-## Exttract only data needed for analysis
+    sys.exit(1)
+
+FILE_CSV = 'csv/' + LANG + 'wiki-latest-stub-meta-history.csv'
+
+print('>>> Reading {} file'.format(FILE_CSV))
+data = pd.read_csv(FILE_CSV, parse_dates=['Timestamp'])
+
+## Extract only data needed for analysis
 # keep only identifiable users, i.e. no IP or MAC addresses or bots
 re_ip  = re.compile('^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
 re_mac = re.compile('^([0-9A-Fa-f]{1,4}[:]){7}([0-9A-Fa-f]{1,4})$')
 re_bot = re.compile('bot$', re.I)
 
 # TODO test if this needs optimizattion for bigger files (no for 200k rows)
+print('>>> Cleaning up the data')
 ips  = data.Contributor.str.match(re_ip)
 macs = data.Contributor.str.match(re_mac)  # --> no actual boolean list, but ok
 bots = data.Contributor.str.contains(re_bot)
@@ -31,6 +41,7 @@ meta = data.Title.str.contains(':')
 columns = ['Contributor', 'Timestamp']
 date_user = data[~(ips | macs | bots | wiki | meta)][columns]
 
+print('>>> Wrangling the data')
 # extract date from timestamp
 date_user['Date'] = [dt.date(x) for x in date_user['Timestamp']]
 date_user.drop('Timestamp', axis=1, inplace=True)
@@ -41,6 +52,7 @@ num_edits = date_user.groupby('Contributor').size()
 # TODO make 25 a statistics-based number (i.e. use brainss)!
 num_edits = num_edits[num_edits >= 25]  # c'mon, at least 25 edits in 10 years!
 
+print('>>> Plotting results')
 users = num_edits.sort_values().index.tolist()
 for i, user in enumerate(users, 1):
     dates = date_user[date_user.Contributor.str.match(user)]['Date'].tolist()
