@@ -68,7 +68,11 @@ for page in pages:
         try:
             contributor = revision.findall(xp('username')).pop().text
         except IndexError:
-            contributor = revision.findall(xp('ip')).pop().text
+            try:
+                contributor = revision.findall(xp('ip')).pop().text
+            except IndexError:
+                # most probably it's a deleted revision, so pass it
+                continue
 
         data.append({
             'ID'         : page_id,
