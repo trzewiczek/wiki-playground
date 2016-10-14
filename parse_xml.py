@@ -1,14 +1,24 @@
 # coding: utf-8
 
-# TODO add some logs, so it's clear the script is working fine
-
-import xml.etree.ElementTree as ET
 import pandas as pd
+import sys
+import xml.etree.ElementTree as ET
 
-# TODO get language code from agrs and download latest file if one not present
 
-# setup the stage
-FILE_NAME = 'szlwiki-latest-stub-meta-history'
+## setup the stage
+try:
+    LANG = sys.argv[1]
+except IndexError:
+    print("!!! No wiki language code specified")
+    print("--- python parse_xml.py <lang_code>")
+
+    sys.exit(1)
+
+FILE_NAME = LANG + 'wiki-latest-stub-meta-history'
+FILE_GZ   = FILE_NAME + '.xml.gz'
+FILE_XML  = 'xml/' + FILE_NAME + '.xml'
+FILE_CSV  = 'csv/' + FILE_NAME + '.csv'
+DUMP_URL  = 'https://dumps.wikimedia.org/{}wiki/latest/{}'.format(LANG, FILE_GZ)
 WIKI_NS   = '{http://www.mediawiki.org/xml/export-0.10/}'
 
 def tag(tag_name):
@@ -21,17 +31,32 @@ def xp(tag_name):
 
 # TODO manage memory more efficient
 
-# extract pages tags from XML file
-tree  = ET.parse('xml/' + FILE_NAME + '.xml')
+## extract pages tags from XML file
+try:
+    xml = open(FILE_XML, 'rb')
+except FileNotFoundError:
+    print("!!! No XML file found. Try to download one.")
+
+    import subprocess
+
+    print(">>> Downloading file from {}".format(DUMP_URL))
+    subprocess.call(['wget', '-O', 'xml/' + FILE_GZ, DUMP_URL])
+    subprocess.call(['gzip', '-d', 'xml/' + FILE_GZ])
+
+    xml = open(FILE_XML, 'rb')
+
+print('>>> Parsing XML file')
+tree = ET.parse(xml)
 root  = tree.getroot()
 pages = [el for el in root.iter(tag('page'))]
 
-# collect the data
+## collect the data
 # name 'Contributor' is used instead of 'User',
 # because sometimes it's just a plain IP or event MAC address
 columns = ['ID', 'Title', 'Timestamp', 'Contributor', 'Quota']
 data    = []
 
+print('>>> Extracting data from {} pages'.format(len(pages)))
 for page in pages:
     page_id    = page.find(tag('id')).text
     page_title = page.find(tag('title')).text
@@ -54,7 +79,8 @@ for page in pages:
             })
 
 
-# save data into csv file via Pandas DataFrame
+## save data into csv
+print('>>> Saving data into {} file'.format(FILE_CSV))
 df = pd.DataFrame(data, columns=columns)
-df.to_csv('csv/' + FILE_NAME + '.csv', index=False)
+df.to_csv(FILE_CSV, index=False)
 
