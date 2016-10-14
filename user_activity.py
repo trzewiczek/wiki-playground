@@ -35,11 +35,11 @@ ips  = data.Contributor.str.match(re_ip)
 macs = data.Contributor.str.match(re_mac)  # --> no actual boolean list, but ok
 bots = data.Contributor.str.contains(re_bot)
 wiki = data.Contributor.str.contains('MediaWiki')
-wiki = data.Contributor.str.match('CommonsDelinker')
+code = data.Contributor.str.match('CommonsDelinker')
 meta = data.Title.str.contains(':')
 
 columns = ['Contributor', 'Timestamp']
-date_user = data[~(ips | macs | bots | wiki | meta)][columns]
+date_user = data[~(ips | macs | bots | wiki | code | meta)][columns]
 
 print('>>> Wrangling the data')
 # extract date from timestamp
