@@ -3,6 +3,7 @@
 import pandas as pd
 import re
 import sys
+import wikiparser
 
 from datetime   import date
 from datetime   import datetime as dt
@@ -18,10 +19,19 @@ except IndexError:
 
     sys.exit(1)
 
-FILE_CSV = 'csv/' + LANG + 'wiki-latest-stub-meta-history.csv'
+FILE_CSV = 'csv/{0}.csv'.format(LANG)
+try:
+    csv_fh = open(FILE_CSV, 'rb')
+    print('>>> CSV file found')
+except FileNotFoundError:
+    print("!!! No CSV file found. Trying to get one.")
+
+    wikiparser.prepare_csv_for(LANG)
+    csv_fh = open(FILE_CSV, 'rb')
 
 print('>>> Reading {} file'.format(FILE_CSV))
-data = pd.read_csv(FILE_CSV, parse_dates=['Timestamp'])
+data = pd.read_csv(csv_fh, parse_dates=['Timestamp'])
+
 
 ## Extract only data needed for analysis
 # keep only identifiable users, i.e. no IP or MAC addresses or bots
