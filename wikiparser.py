@@ -4,6 +4,10 @@ import pandas as pd
 import sys
 import xml.sax
 
+# TODO clean up all paths constants
+WIKI_MD5S  = 'https://dumps.wikimedia.org/{0}wiki/latest/{0}wiki-latest-md5sums.txt'
+CACHE_MD5S = 'md5sums_cache.pickle'
+
 
 class PageHandler(xml.sax.ContentHandler):
 
@@ -84,6 +88,50 @@ class PageHandler(xml.sax.ContentHandler):
         df.to_csv(self.output_file, index=False)
 
 
+def new_version_available_for(lang):
+    import pickle
+    import requests
+
+    try:
+        with open(CACHE_MD5S.format(lang), 'rb') as f:
+            cache_md5s = pickle.load(f)
+    except FileNotFoundError:
+        # this is the first run of the program
+        return True
+
+    try:
+        cache_md5sum = cache_md5s[lang]
+    except KeyError:
+        # this lang version never has been downloaded
+        return True
+
+    wiki_md5s   = requests.get(WIKI_MD5S.format(lang)).text.splitlines()
+    wiki_md5sum = [row[:32] for row in wiki_md5s if 'meta-history' in row].pop()
+
+    new_version_available = not cache_md5sum == wiki_md5sum
+
+    return new_version_available
+
+
+def update_md5sums_cache_for(path, lang):
+    import pickle
+    import subprocess
+
+    try:
+        with open(CACHE_MD5S.format(lang), 'rb') as f:
+            cache_md5s = pickle.load(f)
+    except FileNotFoundError:
+        # this is the first run of the program
+        cache_md5s = {}
+
+
+    md5sum = subprocess.check_output(['md5sum', path]).decode('utf-8')[:32]
+    cache_md5s[lang] = md5sum
+
+    with open(CACHE_MD5S.format(lang), 'wb') as f:
+        pickle.dump(cache_md5s, f)
+
+
 def prepare_csv_for(lang):
     FILE_NAME = lang + 'wiki-latest-stub-meta-history'
     FILE_GZ   = FILE_NAME + '.xml.gz'
@@ -94,13 +142,18 @@ def prepare_csv_for(lang):
     try:
         xml_fh = open(FILE_XML, 'rb')
         print('>>> XML file found')
-    except FileNotFoundError:
-        print("!!! No XML file found. Trying to download one.")
+        if new_version_available_for(lang):
+            print('!!! New verion of the file available')
+            # hackish, but the up to date version of the file not found indeed
+            raise FileNotFoundError
 
+    except FileNotFoundError:
         import subprocess
 
         print(">>> Downloading file from {}".format(DUMP_URL))
         subprocess.call(['wget', '-O', 'xml/' + FILE_GZ, DUMP_URL])
+        update_md5sums_cache_for('xml/' + FILE_GZ, lang)
+        print(">>> MD5 Sums Cache updated")
         subprocess.call(['gzip', '-d', 'xml/' + FILE_GZ])
 
         xml_fh = open(FILE_XML, 'rb')
