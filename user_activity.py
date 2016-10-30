@@ -1,9 +1,9 @@
 # coding: utf-8
 
-import pandas as pd
+import datastore as ds
+import pandas    as pd
 import re
 import sys
-import datastore
 
 from datetime   import date
 from datetime   import datetime as dt
@@ -20,7 +20,8 @@ except IndexError:
     sys.exit(1)
 
 print('>>> Reading data for {}'.format(LANG))
-data = datastore.get_data_for(LANG)
+store = ds.DataStore(LANG)
+data  = store.get_data()
 
 
 ## Extract only data needed for analysis
