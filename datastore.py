@@ -28,7 +28,7 @@ class DataStore(object):
 
         if self.new_version_available() or not os.path.isfile(self.csv_path):
             self.download_xml_file()
-            wikiparser.parse_xml_for(self.lang)
+            wikiparser.parse_xml_for(self.lang, self.csv_path, self.xml_path)
 
         return pd.read_csv(self.csv_path, parse_dates=['Timestamp'])
 

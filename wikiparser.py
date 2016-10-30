@@ -85,10 +85,7 @@ class PageHandler(xml.sax.ContentHandler):
 
 
 
-def parse_xml_for(lang):
-    csv_path = 'csv/{}.csv'.format(lang)
-    xml_path = 'xml/{}wiki-latest-stub-meta-history.xml'.format(lang)
-
+def parse_xml_for(lang, csv_path, xml_path):
     print(">>> Parsing XML file")
     parser = xml.sax.make_parser()
     parser.setContentHandler(PageHandler(csv_path))
